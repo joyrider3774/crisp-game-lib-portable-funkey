@@ -8,6 +8,15 @@ And i could not easily fit in those changes in the original authors repository w
 original repo is here https://abagames.github.io/crisp-game-lib-portable/ this version is based on my SDL1 port with adaptations for the funkey and rgnano
 Below you can find the original Readme
 
+## Screenshots
+![screenshot 1](screenshots/screenshot1.png)
+![screenshot 2](screenshots/screenshot2.png)
+![screenshot 3](screenshots/screenshot3.png)
+![screenshot 4](screenshots/screenshot4.png)
+
+## Preview for retrofe 
+![preview](meta/cglpsdl1-preview.png)
+
 # crisp-game-lib-portable
 
 Minimal C-lang library for creating classic arcade-like mini-games running on devices and browsers. Re-implemented version of [crisp-game-lib](https://github.com/abagames/crisp-game-lib) for smaller devices. You can play [sample games in your browser](https://abagames.github.io/crisp-game-lib-portable/build/).
