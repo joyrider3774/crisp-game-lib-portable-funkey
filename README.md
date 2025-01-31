@@ -1,4 +1,5 @@
 # crisp-game-lib-portable-funkey
+![DownloadCountTotal](https://img.shields.io/github/downloads/joyrider3774/crisp-game-lib-portable-funkey/total?label=total%20downloads&style=plastic) ![DownloadCountLatest](https://img.shields.io/github/downloads/joyrider3774/crisp-game-lib-portable-funkey/latest/total?style=plastic) ![LatestVersion](https://img.shields.io/github/v/tag/joyrider3774/crisp-game-lib-portable-funkey?label=Latest%20version&style=plastic) ![License](https://img.shields.io/github/license/joyrider3774/crisp-game-lib-portable-funkey?style=plastic)
 
 Seperate repository for funkey-s / RG-Nano as i had to modify games and library to account for a bug that only occurs on those devices.
 The trig functions need to have normalized angles (between 0 & 2 x PI) or it will fail over time and draw squares instead of circles and so.
