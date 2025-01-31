@@ -17,6 +17,8 @@ Below you can find the original Readme
 ## Preview for retrofe 
 ![preview](meta/cglpsdl1-preview.png)
 
+- created by Sai from funkey discord
+  
 # crisp-game-lib-portable
 
 Minimal C-lang library for creating classic arcade-like mini-games running on devices and browsers. Re-implemented version of [crisp-game-lib](https://github.com/abagames/crisp-game-lib) for smaller devices. You can play [sample games in your browser](https://abagames.github.io/crisp-game-lib-portable/build/).
