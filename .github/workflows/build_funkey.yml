@@ -35,7 +35,7 @@ jobs:
           mkdir -p opk
           cp cglpsdl1 opk/cglpsdl1
           cp meta/cglpsdl1.png opk/cglpsdl1.png
-          cp $GAME_NAME.$GAME_SYS.desktop opk/$GAME_NAME.$GAME_SYS.desktop
+          cp meta/$GAME_NAME.$GAME_SYS.desktop opk/$GAME_NAME.$GAME_SYS.desktop
 
           mksquashfs ./opk $GAME_NAME.opk -all-root -noappend -no-exports -no-xattrs
                
