@@ -58,6 +58,37 @@ typedef struct {
     bool isAlive;
 } Fish;
 
+static void drawCharacterScaled(char* chr, float x, float y, float scaleX, float scaleY) {
+    // Get character index
+    int charIndex = chr[0] - 'a';
+    if (charIndex < 0 || charIndex >= charactersCount) return;
+
+    // Calculate scaled size (each 'block' in the character is scaled)
+    float blockSize = 1 * scaleX;  // Base size multiplied by scale
+
+    // Draw each non-empty block of the character scaled
+    for(int origY = 0; origY < CHARACTER_HEIGHT; origY++) {
+        for(int origX = 0; origX < CHARACTER_WIDTH; origX++) {
+            char pixel = characters[charIndex][origY][origX];
+            if(pixel != ' ') {
+                float drawX = x + (origX - CHARACTER_WIDTH/2.0f) * scaleX;
+                float drawY = y + (origY - CHARACTER_HEIGHT/2.0f) * scaleY;
+                box(drawX, drawY, blockSize, blockSize);
+            }
+        }
+    }
+}
+
+static Collision characterScaled(char* chr, float x, float y, float scaleX, float scaleY) {
+    drawCharacterScaled(chr, x, y, scaleX, scaleY);
+    
+    float scaledWidth = CHARACTER_WIDTH * scaleX;
+    float scaledHeight = CHARACTER_HEIGHT * scaleY;
+    return box(x, y, scaledWidth, scaledHeight);
+}
+
+
+
 #define MAX_FISHES 100
 static Bird bird;
 static Fish fishes[MAX_FISHES];
@@ -163,19 +194,31 @@ static void update() {
                 continue;
             }
 
-            if (f->type == BIG) {
+             if (f->type == BIG) {
                 color = WHITE;
                 line(f->pos.x, f->pos.y - 3, f->pos.x - 10, f->pos.y);
                 line(f->pos.x, f->pos.y - 5, f->pos.x + 16, f->pos.y);
                 line(f->pos.x, f->pos.y + 5, f->pos.x - 16, f->pos.y);
                 line(f->pos.x, f->pos.y + 5, f->pos.x + 16, f->pos.y);
             }
+            
             color = (f->type == EYE) ? BLUE : BLACK;
+            
+            // Draw fish at appropriate scale
+            if (f->type == BIG || f->type == FAKE) {
+                characterScaled("a", f->pos.x, f->pos.y, sc, sc);
+            } else {
+                character("a", f->pos.x, f->pos.y);
+            }
         }
 
-        //characterOptions.scale.x = sc;
-        //characterOptions.scale.y = sc;
-        character("a", f->pos.x, f->pos.y);
+        // Use scaled character drawing
+        Collision c;
+        if (f->type == BIG || f->type == FAKE) {
+            c = characterScaled("a", f->pos.x, f->pos.y, sc, sc);
+        } else {
+            c = character("a", f->pos.x, f->pos.y);
+        }
 
         if (f->type != BIG && distanceTo(&f->pos, bird.pos.x, bird.pos.y) < 6) {
             addScore(multiplier, f->pos.x, f->pos.y);
