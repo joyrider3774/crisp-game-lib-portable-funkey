@@ -86,7 +86,12 @@ typedef struct {
   Vector size;
 } HitBox;
 
-#define MAX_HIT_BOX_COUNT 256
+//had to increase for:
+//gameCircleW (reached around 800) if too many hitboxes is hit game fails to function properly and will draw circles over each other
+//gameFrog (reached around 1580)
+//R Wheel (reached around 400 can probably hit more)
+//B Cannon (reached around 300 depending on nr of balls)
+#define MAX_HIT_BOX_COUNT 2048
 /// \endcond
 static HitBox hitBoxes[MAX_HIT_BOX_COUNT];
 static int hitBoxesIndex;
