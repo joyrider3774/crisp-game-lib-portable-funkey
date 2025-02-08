@@ -1,4 +1,5 @@
 #include "cglp.h"
+#include "trig_normalization.h"
 
 static char *title = "BOMB UP";
 static char *description = "[Tap]\n Throw\n Blast";
@@ -157,7 +158,7 @@ static void update() {
     // Update explosion
     if (explosion.exists) {
         explosion.ticks++;
-        float r = sin(explosion.ticks * 0.15f) * 25;
+        float r = normalized_sinf(explosion.ticks * 0.15f) * 25;
         if (r < 0) {
             explosion.exists = false;
         } else {
