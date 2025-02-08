@@ -25,6 +25,8 @@
 #define AMPLITUDE 10000
 #define FADE_OUT_TIME 0.05f    // Fade-out time in seconds
 
+#define FPS_SAMPLES 10
+
 #define MAX(a,b) ((a) > (b) ? (a) : (b))
 
 static int WINDOW_WIDTH = DEFAULT_WINDOW_WIDTH;
@@ -36,7 +38,7 @@ static float scale = 1.0f;
 static int viewW = DEFAULT_WINDOW_WIDTH;
 static int viewH = DEFAULT_WINDOW_HEIGHT;
 static Uint32 frameticks = 0;
-static float frameTime = 0.0f;
+static Uint32 frameTime = 0;
 static Uint32 clearColor = 0;
 static float audioVolume = 1.00f;
 static SDL_Surface *screen = NULL, *view = NULL;
@@ -46,8 +48,17 @@ static int overlay = DEFAULT_OVERLAY;
 static int glowSize = DEFAULT_GLOW_SIZE;
 static float wscale = 1.0f;
 static bool glowEnabled = DEFAULT_GLOWENABLED;
-
+static Uint32 videoFlags = SDL_SWSURFACE;
+static bool nodelay = false;
 static SDL_AudioSpec audiospec = {0};
+static int startgame = -1;
+
+static int fpsSamples[FPS_SAMPLES];
+static bool showfps = false;
+static float avgfps = 0;
+static int framecount = 0;
+static int lastfpstime = 0;
+static int fpsAvgCount = 0;
 
 typedef struct {
     float frequency; // Frequency of the note in Hz
@@ -79,6 +90,45 @@ AudioState audio_state = {0};
 
 static CharaterSprite characterSprites[MAX_CACHED_CHARACTER_PATTERN_COUNT];
 static int characterSpritesCount;
+
+static void loadHighScores()
+{
+    char fileName[FILENAME_MAX];
+    sprintf(fileName,"%s/.cglpscore.dat",getenv("HOME") == NULL ? ".": getenv("HOME"));
+    FILE *fp;
+    fp = fopen(fileName, "rb");
+    if(fp)
+    {
+        int i = 0;
+        while (!feof(fp) && (i < gameCount))
+        {
+            fread(hiScores[i].title, sizeof(char), 100, fp);
+            fread(&hiScores[i].hiScore, sizeof(int), 1, fp);
+            i++;
+        }
+        fclose(fp);
+    }
+}
+
+static void saveHighScores()
+{
+    char fileName[FILENAME_MAX];
+    sprintf(fileName,"%s/.cglpscore.dat",getenv("HOME") == NULL ? ".": getenv("HOME"));
+    FILE *fp;
+    fp = fopen(fileName, "wb");
+    if(fp)
+    {
+        for (int i = 0; i < gameCount; i++)
+        {
+            if(strlen(hiScores[i].title) > 0)
+            {                
+                fwrite(hiScores[i].title, sizeof(char), 100, fp);
+                fwrite(&hiScores[i].hiScore, sizeof(int), 1, fp);
+            }
+        }
+        fclose(fp);
+    }
+}
 
 static GlowDistanceTable* createDistanceTable(int glowSize) {
     GlowDistanceTable* table = (GlowDistanceTable*)SDL_malloc(sizeof(GlowDistanceTable));
@@ -598,7 +648,7 @@ void md_drawCharacter(unsigned char grid[CHARACTER_HEIGHT][CHARACTER_WIDTH][3],
     if(cp && cp->sprite) {
         SDL_Rect dst = {
             (Sint16)((float)x * scale) - (glowEnabled && !isInMenu ? glowSize : 0),
-            (Sint16)((float)y * scale) - (glowEnabled && !isInMenu? glowSize : 0),
+            (Sint16)((float)y * scale) - (glowEnabled && !isInMenu ? glowSize : 0),
             cp->sprite->w,
             cp->sprite->h
         };
@@ -656,6 +706,8 @@ void md_clearScreen(unsigned char r, unsigned char g, unsigned char b)
 
 void md_initView(int w, int h) 
 {
+    if(!screen)
+        return;
     float xScale = (float)WINDOW_WIDTH / w;
     float yScale = (float)WINDOW_HEIGHT / h;
     if (yScale < xScale)
@@ -749,7 +801,7 @@ void update()
 
     if ((prevKeys[BUTTON_MENU] == 0) && (keys[BUTTON_MENU] == 1))
     {
-        if (!isInMenu)
+        if (!isInMenu && (startgame == -1))
             goToMenu();
         else
             quit = 1;
@@ -827,6 +879,17 @@ void update()
             SDL_FillRect(view, &dst, SDL_MapRGB(view->format, 0,0,0));
         }
     }
+    if(showfps)
+    {
+        char fpsText[10];
+        sprintf(fpsText, "%.2f", avgfps);
+        int prev = color;
+        color = BLACK;
+        rect(0,0,strlen(fpsText)*6, 6);
+        color = WHITE;
+        text(fpsText, 2, 3);
+        color = prev;
+    }   
     SDL_Rect src = {0, 0, viewW, viewH};
     SDL_Rect dst = {(WINDOW_WIDTH - viewW) >> 1, (WINDOW_HEIGHT - viewH) >> 1, viewW, viewH};
     SDL_BlitSurface(view, &src, screen, &dst);
@@ -851,6 +914,11 @@ void printHelp(char* exe)
     printf("  -f: Run fullscreen\n");
     printf("  -ns: No Sound\n");
     printf("  -a: Use hardware (accelerated) surfaces\n");
+    printf("  -fps: Show fps\n");
+    printf("  -nd: no fps delay (run as fast as possible)\n");
+    printf("  -list: List game names to be used with -g option\n");
+    printf("  -g <GAMENAME>: run game <GAMENAME> only\n");
+    printf("  -ms: Make screenshot of every game\n");
 }
 
 int main(int argc, char **argv)
@@ -861,6 +929,7 @@ int main(int argc, char **argv)
 		bool fullScreen = false;
         bool useHWSurface = false;
         bool noAudioInit = false;
+        bool makescreenshots = false;
 		for (int i=0; i < argc; i++)
 		{
             if((strcasecmp(argv[i], "-?") == 0) || (strcasecmp(argv[i], "--?") == 0) || 
@@ -873,8 +942,14 @@ int main(int argc, char **argv)
 			if(strcasecmp(argv[i], "-f") == 0)
 				fullScreen = true;
 
+            if(strcasecmp(argv[i], "-fps") == 0)
+                showfps = true;
+
             if(strcasecmp(argv[i], "-ns") == 0)
 				noAudioInit = true;
+
+            if(strcasecmp(argv[i], "-nd") == 0)
+			    nodelay = true;
             
             if(strcasecmp(argv[i], "-a") == 0)
 				useHWSurface = true;
@@ -886,17 +961,40 @@ int main(int argc, char **argv)
             if(strcasecmp(argv[i], "-h") == 0)
                 if(i+1 < argc)
                     WINDOW_HEIGHT = atoi(argv[i+1]);
+            
+            if(strcasecmp(argv[i], "-g") == 0)
+                if(i+1 < argc)
+                    startgame = i+1;
+            
+            if(strcasecmp(argv[i], "-list") == 0)
+            {
+                initGame();
+                quit = 1;
+                int counter = 0;
+                for (int i = 1; i < gameCount; i++)
+                {
+                    if(getGame(i).update != NULL)
+                    {
+                        counter++;
+                        printf("%d. %s\n", counter, getGame(i).title);
+                    }
+                }
+                return 0;
+            }
+
+            if(strcasecmp(argv[i], "-ms") == 0)
+                makescreenshots = true;
 			
 		}
 
-		Uint32 flags = SDL_SWSURFACE;
+		videoFlags = SDL_SWSURFACE;
         if(useHWSurface)
-            flags = SDL_HWSURFACE;
+            videoFlags = SDL_HWSURFACE;
 
 		if(fullScreen)
-			flags |= SDL_FULLSCREEN;
+			videoFlags |= SDL_FULLSCREEN;
         
-        screen = SDL_SetVideoMode( WINDOW_WIDTH, WINDOW_HEIGHT, 0, flags);
+        screen = SDL_SetVideoMode( WINDOW_WIDTH, WINDOW_HEIGHT, 0, videoFlags);
 		if(screen)
 		{
 			SDL_WM_SetCaption( "Crisp Game Lib Portable Sdl1", NULL);
@@ -906,6 +1004,28 @@ int main(int argc, char **argv)
             float wscaley = (float)WINDOW_HEIGHT / (float)DEFAULT_WINDOW_HEIGHT;
             wscale = (wscaley < wscalex) ? wscaley : wscalex;
             glowSize = (float)DEFAULT_GLOW_SIZE * wscale;
+			initCharacterSprite();
+            initGame();
+            if(makescreenshots)
+            {
+                quit = 1;
+                for (int i = 1; i < gameCount; i++)
+                {
+                    if(getGame(i).update == NULL)
+                        continue;
+                    restartGame(i);
+                    setButtonState(false,false,false,false,false,false);
+                    updateFrame();
+                    setButtonState(false,false,false,false,false,true);
+                    updateFrame();
+                    setButtonState(false,false,false,false,false,false);
+                    for (int j = 0; j < 140; j++)
+                        updateFrame();
+                    char filename[512];
+                    sprintf(filename, "./%s.bmp", getGame(i).title);
+                    SDL_SaveBMP(view, filename);
+                }
+            }
             if(!noAudioInit)
             {
                 soundOn = InitAudio();
@@ -913,9 +1033,23 @@ int main(int argc, char **argv)
                     printf("Succesfully opened audio\n");
                 else
                     printf("Failed to open audio\n");
+            } 
+            if (startgame > 1)
+            {
+                int tmp = startgame;
+                startgame = -1;
+                for (int i = 0; i < gameCount; i++)
+                {
+                    if(strcasecmp(argv[tmp], getGame(i).title) == 0)
+                    {
+                        startgame = i;
+                        restartGame(i);
+                        break;
+                    }
+                }
             }
-            initCharacterSprite();
-            initGame();
+            loadHighScores();
+            int skip = 10;
             while(quit == 0)
             {
                 frameticks = SDL_GetTicks();
@@ -923,9 +1057,36 @@ int main(int argc, char **argv)
                 if(quit == 0)
                 {
                     frameTime = SDL_GetTicks() - frameticks;
-                    float delay = 1000.0f / FPS - frameTime;
-                    if (delay > 0.0f)
-                        SDL_Delay((Uint32)(delay));
+                    double delay = 1000.0f / FPS - frameTime;
+                    if (!nodelay && (delay > 0.0f))
+                        SDL_Delay((Uint32)(delay)); 
+                    if (showfps)
+                    {
+                        if(skip > 0)
+                        {
+                            skip--;
+                            lastfpstime = SDL_GetTicks();
+                        }
+                        else
+                        {
+                            framecount++;
+                            if(SDL_GetTicks() - lastfpstime >= 1000)
+                            {
+                                for (int i = FPS_SAMPLES-1; i > 0; i--)
+                                    fpsSamples[i] = fpsSamples[i-1];
+                                fpsSamples[0] = framecount;
+                                fpsAvgCount++;
+                                if(fpsAvgCount > FPS_SAMPLES)
+                                    fpsAvgCount = FPS_SAMPLES;
+                                int fpsSum = 0;
+                                for (int i = 0; i < fpsAvgCount; i++)
+                                    fpsSum += fpsSamples[i];
+                                avgfps = (float)fpsSum / (float)fpsAvgCount;
+                                framecount = 0;
+                                lastfpstime = SDL_GetTicks();
+                            }
+                        }
+                    }
                 }
             } 
         
@@ -934,6 +1095,7 @@ int main(int argc, char **argv)
                 SDL_FreeSurface(view);
             if(screen)
 			    SDL_FreeSurface(screen);
+            saveHighScores();
 		}
 		else
 		{
