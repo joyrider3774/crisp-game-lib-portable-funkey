@@ -14,6 +14,20 @@ Below you can find the original Readme
 ![screenshot 3](screenshots/screenshot3.png)
 ![screenshot 4](screenshots/screenshot4.png)
 
+## Playing the Game
+The library starts up on the menu where you choose a game and play it, at the beginning of each game it will tell you the controls / behaviour 
+
+## Controls
+- Dpad: Select menu's
+- A: Confirm in menus, button action in game
+- B: On menu item lower in menus, button action in game
+- Y: Switch sound calculation (default does sound the best)
+- X: Switch Alternate views & overlays which are saved per game
+- START: Switch between dark color mode enabled or not, this is saved per game
+- L: Decrease Volume
+- R: Increase Volume
+- Menu button: Quit current game, exit game
+
 ## Preview for retrofe 
 ![preview](meta/cglpsdl1-preview.png)
 
