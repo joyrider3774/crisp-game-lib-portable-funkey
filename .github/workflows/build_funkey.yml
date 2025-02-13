@@ -39,9 +39,27 @@ jobs:
           cp meta/explorer.desktop opk/explorer.desktop
 
           mksquashfs ./opk $GAME_NAME.opk -all-root -noappend -no-exports -no-xattrs
-               
+     
+      - name: package meta
+        env:
+          GAME_NAME: ${{env.GAME_NAME}}
+          GAME_SYS: ${{env.GAME_SYS}}
+        run: |
+          mkdir -p metarelease
+          cp -r "meta/cgl files" "metarelease/"
+          cp -r "meta/retrofe files" "metarelease/"
+          cp -r "meta/screenshots" "metarelease/"
+          cp "meta/cglpsdl1-preview.png" "metarelease/cglpsdl1-preview.png"
+          
       - name: Store build
         uses: actions/upload-artifact@v4
         with:
           name: ${{env.GAME_NAME}}_${{env.GAME_SYS}}
           path: ${{env.GAME_NAME}}.opk
+       
+      - name: Store Meta
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{env.GAME_NAME}}_${{env.GAME_SYS}}-MetaFiles
+          path: metarelease
+
