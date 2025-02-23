@@ -32,6 +32,10 @@ The library starts up on the menu where you choose a game and play it, at the be
 ![preview](meta/cglpsdl1-preview.png)
 
 - created by Sai from funkey discord
+
+![preview](meta/cglpsdl1-preview2.png)
+
+- created by me using images from Sai above and banner from TommyShots previews
   
 # crisp-game-lib-portable
 
