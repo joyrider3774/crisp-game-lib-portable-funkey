@@ -41,6 +41,7 @@
 
 #define SAMPLE_RATE 44100
 #define BUFFER_SIZE 512
+#define SOUND_CHANNELS 1       // do not change it only supports MONO but sdl might convert
 #define MAX_NOTES 128
 #define AMPLITUDE 10000
 #define FADE_OUT_TIME 0.05f    // Fade-out time in seconds
@@ -72,7 +73,6 @@ static float wscale = 1.0f;
 static bool glowEnabled = DEFAULT_GLOWENABLED;
 static Uint32 videoFlags = SDL_SWSURFACE;
 static bool nodelay = false;
-static SDL_AudioSpec audiospec = {0};
 static char startgame[100] = {0};
 
 static int fpsSamples[FPS_SAMPLES];
@@ -464,107 +464,107 @@ static float generateSineWave(float frequency, TimerType ticks)
 // Audio callback
 static void audio_callback(void *userdata, Uint8 *stream, int len)
 {
-   AudioState *audio_state = (AudioState *)userdata;
-   Sint16 *buffer = (Sint16 *)stream;
-   int sample_count = len / sizeof(Sint16);
-   // Intermediate float buffer to accumulate the summed waveforms
-   float* float_buffer = (float*)malloc(sample_count * sizeof(float));
-   if (float_buffer == NULL)
-       return;
+    AudioState *audio_state = (AudioState *)userdata;
+    Sint16 *buffer = (Sint16 *)stream;
+    int sample_count = (len / sizeof(Sint16));
+    // Intermediate float buffer to accumulate the summed waveforms
+    float* float_buffer = (float*)malloc(sample_count * sizeof(float));
+    if (float_buffer == NULL)
+        return;
  
-   memset(float_buffer, 0, sample_count * sizeof(float));
+    memset(float_buffer, 0, sample_count * sizeof(float));
    
-   // Track active notes
-   int active_note_count = 0;
+    // Track active notes
+    int active_note_count = 0;
 
 
-   for (int i = 0; i < audio_state->note_count; i++) 
-   {
-       Note *note = &audio_state->notes[i];
+    for (int i = 0; i < audio_state->note_count; i++) 
+    {
+        Note *note = &audio_state->notes[i];
        
-       // Convert note start time to current time context
-       TimerType note_start_sample = timeToSample(note->when);
-       float current_sample_time = sampleToTime(audio_state->time);
+        // Convert note start time to current time context
+        TimerType note_start_sample = timeToSample(note->when);
+        float current_sample_time = sampleToTime(audio_state->time);
        
-       if (!note->active && current_sample_time >= note->when) 
-       {
-           note->active = true;
-       }
+        if (!note->active && current_sample_time >= note->when) 
+        {
+            note->active = true;
+        }
 
-       if (note->active) 
-       {
-           // Determine if note should be deactivated
-           if (current_sample_time > note->when + note->duration + FADE_OUT_TIME) 
-           {
-               note->active = false; // Mark note as inactive after fade-out
-               continue; // Skip to the next note
-           }
+        if (note->active) 
+        {
+            // Determine if note should be deactivated
+            if (current_sample_time > note->when + note->duration + FADE_OUT_TIME) 
+            {
+                note->active = false; // Mark note as inactive after fade-out
+                continue; // Skip to the next note
+            }
            
-           // Sum of all active notes' waveforms
-           for (int j = 0; j < sample_count; j++) 
-           {
-               TimerType current_sample = audio_state->time + j;
-               float sample_time = sampleToTime(current_sample);
-               float amplitude = audioVolume;
+            // Sum of all active notes' waveforms
+            for (int j = 0; j < sample_count; j++) 
+            {
+                TimerType current_sample = audio_state->time + j;
+                float sample_time = sampleToTime(current_sample);
+                float amplitude = audioVolume;
 
-               float note_end_time = note->when + note->duration;
+                float note_end_time = note->when + note->duration;
 
-               // Fade out ending notes
-               if (sample_time > note_end_time) 
-               {
-                   float fade_progress = (sample_time - note_end_time) / FADE_OUT_TIME;
-                   amplitude *= (1.0f - fade_progress);
-                   if (amplitude < 0.0f) 
-                       amplitude = 0.0f;
-               }
+                // Fade out ending notes
+                if (sample_time > note_end_time) 
+                {
+                    float fade_progress = (sample_time - note_end_time) / FADE_OUT_TIME;
+                    amplitude *= (1.0f - fade_progress);
+                    if (amplitude < 0.0f) 
+                        amplitude = 0.0f;
+                }
 				
-			   // Add this note's waveform to the float buffer
-               // Use sample time for wave generation
-               float_buffer[j] += generateSineWave(note->frequency, current_sample) * AMPLITUDE * amplitude;
-           }
-       }
+			    // Add this note's waveform to the float buffer
+                // Use sample time for wave generation
+                float_buffer[j] += generateSineWave(note->frequency, current_sample) * AMPLITUDE * amplitude;                
+            }
+        }
 
-       // Always add notes that are either active or scheduled for the future
-       if (note->active || (note_start_sample > audio_state->time)) 
-       {
-           audio_state->notes[active_note_count++] = *note;
-       }
-   }
+        // Always add notes that are either active or scheduled for the future
+        if (note->active || (note_start_sample > audio_state->time)) 
+        {
+            audio_state->notes[active_note_count++] = *note;
+        }
+    }
 
     // Update the note count to reflect only active notes
     audio_state->note_count = active_note_count;
 
-   // Find the maximum amplitude in the float buffer and normalize
-   float max_amplitude = 0.0f;
-   for (int i = 0; i < sample_count; i++) 
-   {
-       if (float_buffer[i] > max_amplitude) 
-           max_amplitude = float_buffer[i];
-       if (float_buffer[i] < -max_amplitude) 
-           max_amplitude = -float_buffer[i];
-   }
+    // Find the maximum amplitude in the float buffer and normalize
+    float max_amplitude = 0.0f;
+    for (int i = 0; i < sample_count; i++) 
+    {
+        if (float_buffer[i] > max_amplitude) 
+            max_amplitude = float_buffer[i];
+        if (float_buffer[i] < -max_amplitude) 
+            max_amplitude = -float_buffer[i];
+    }
 
-   // If the maximum amplitude exceeds the allowed range, scale it down
-   if (max_amplitude > 32767.0f) 
-   {
-       float scale_factor = 32767.0f / max_amplitude;
-       for (int i = 0; i < sample_count; i++) 
-       {
-	       // Normalize and directly convert to Sint16
-           buffer[i] = (Sint16)(float_buffer[i] * scale_factor);
-       }
-   } 
-   else 
-   {
-       // If there's no clipping, just convert to Sint16 directly
-       for (int i = 0; i < sample_count; i++) 
-       {
-           buffer[i] = (Sint16)float_buffer[i];
-       }
-   }
+    // If the maximum amplitude exceeds the allowed range, scale it down
+    if (max_amplitude > 32767.0f) 
+    {
+        float scale_factor = 32767.0f / max_amplitude;
+        for (int i = 0; i < sample_count; i++) 
+        {
+	        // Normalize and directly convert to Sint16
+            buffer[i] = (Sint16)(float_buffer[i] * scale_factor);
+        }
+    } 
+    else 
+    {
+        // If there's no clipping, just convert to Sint16 directly
+        for (int i = 0; i < sample_count; i++) 
+        {
+            buffer[i] = (Sint16)float_buffer[i];
+        }
+    }
 
-   audio_state->time += sample_count;
-   free(float_buffer);
+    audio_state->time += sample_count;
+    free(float_buffer);
 }
 
 static void schedule_note(AudioState *audio_state, float frequency, float when, float duration)
@@ -605,20 +605,14 @@ static int InitAudio()
 {
 	SDL_AudioSpec spec = {0};
     spec.freq = SAMPLE_RATE;
-    spec.format = AUDIO_S16SYS; // Use signed 16-bit audio
-    spec.channels = 1;         // Mono audio
+    spec.format = AUDIO_S16SYS;
+    spec.channels = SOUND_CHANNELS; 
     spec.samples = BUFFER_SIZE;
     spec.callback = audio_callback;
     spec.userdata = &audio_state;
 
-	if(SDL_OpenAudio(&spec, &audiospec) < 0)
+	if(SDL_OpenAudio(&spec, NULL) < 0)
 		return -1;
-
-	if(audiospec.format != AUDIO_S16SYS)
-    {
-        SDL_CloseAudio();
-		return -1;
-    }
 
     SDL_PauseAudio(0);
 	return 1;
@@ -1178,10 +1172,15 @@ static void update()
         char fpsText[10];
         sprintf(fpsText, "%.2f", avgfps);
         int prev = color;
+        CharacterOptions prevCharOptions = characterOptions;
+        characterOptions.isMirrorX = false;
+        characterOptions.isMirrorY = false;
+        characterOptions.rotation = 0;
         color = BLACK;
         rect(0,0,strlen(fpsText)*6, 6);
         color = WHITE;
         text(fpsText, 2, 3);
+        characterOptions = prevCharOptions;
         color = prev;
     }
 
@@ -1234,7 +1233,7 @@ static void printHelp(char* exe)
         ++binaryName;
 
     printf("Crisp Game Lib Portable Sdl 1 Version\n");
-    printf("Usage: %s [-w <WIDTH>] [-h <HEIGHT>] [-f] [-ns] [-a] [-fps] [-nd] [-g <GAMENAME>] [-ms] [CGL file]  \n", binaryName);
+    printf("Usage: %s [-w <WIDTH>] [-h <HEIGHT>] [-f] [-ns] [-a] [-fps] [-nd] [-g <GAMENAME>] [-ms] [-cgl] [CGL file]  \n", binaryName);
     printf("\n");
     printf("Commands:\n");
     printf("  -w <WIDTH>: use <WIDTH> as window width\n");
@@ -1247,6 +1246,7 @@ static void printHelp(char* exe)
     printf("  -list: List game names to be used with -g option\n");
     printf("  -g <GAMENAME>: run game <GAMENAME> only\n");
     printf("  -ms: Make screenshot of every game\n");
+    printf("  -cgl: Generate .cgl files for all games\n");
     printf("  CGL file: Pass a .cgl file to launch a game directly\n");
 }
 
@@ -1272,8 +1272,8 @@ int main(int argc, char **argv)
 #endif
 	if (SDL_Init(SDL_INIT_VIDEO) == 0)
 	{
-        atexit(SDL_Cleanup);
         printf("SDL Succesfully initialized\n");
+        atexit(SDL_Cleanup);
 		bool fullScreen = false;
         bool useHWSurface = false;
         bool noAudioInit = false;
@@ -1391,7 +1391,7 @@ int main(int argc, char **argv)
         screen = SDL_SetVideoMode( WINDOW_WIDTH, WINDOW_HEIGHT, 0, videoFlags);
 		if(screen)
 		{
-			SDL_WM_SetCaption( "Crisp Game Lib Portable Sdl1", NULL);
+			SDL_WM_SetCaption( "Crisp Game Lib Portable Sdl 1", NULL);
 			printf("Succesfully Set %dx%d\n",WINDOW_WIDTH, WINDOW_HEIGHT);
             SDL_ShowCursor(SDL_DISABLE);
             float wscalex = (float)WINDOW_WIDTH / (float)DEFAULT_WINDOW_WIDTH;
