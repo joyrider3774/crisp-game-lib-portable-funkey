@@ -5,7 +5,7 @@ Seperate repository for funkey-s / RG-Nano as i had to modify games and library 
 The trig functions need to have normalized angles (between 0 & 2 x PI) or it will fail over time and draw squares instead of circles and so.
 And i could not easily fit in those changes in the original authors repository where i plan to PR the SDL1 & SDL2 port against
 
-original repo is here https://abagames.github.io/crisp-game-lib-portable/ this version is based on my SDL1 port with adaptations for the funkey and rgnano
+original repo is here https://github.com/abagames/crisp-game-lib-portable/ this version is based on my SDL1 port with adaptations for the funkey and rgnano
 Below you can find the original Readme
 
 ## Screenshots
