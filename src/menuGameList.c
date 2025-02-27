@@ -35,6 +35,9 @@ void addGameChargeBeam();
 void addGameCirclew();
 void addGameCounterB();
 void addGameCTower();
+void addGameDescents();
+void addGameDivarr();
+void addGameDLaser();
 
 //working requires mouse 
 void addGameBBlast();
@@ -43,6 +46,8 @@ void addGameBreedc();
 void addGameCardq();
 void addGameCNodes();
 void addGameCrossLine();
+void addGameDarkCave();
+void addGameDFight();
 
 //working inccorectly
 void addGameAccelB();
@@ -52,9 +57,8 @@ void addGameAccelB();
 void addGameSection(char* sectionName)
 {
     Options o = { 0 };
-    addGame(sectionName, "", NULL, 0, o, NULL);
+    addGame(sectionName, "", NULL, 0, o, false, NULL);
 }
-
 
 void addGames() {
   addGameSection("==DEFAULT GAMES==");
@@ -73,7 +77,6 @@ void addGames() {
   addGameGrapplingH();
   addGameInTow();
   addGameTimberTest();
-  addGameFracave();
   
   //new games
   addGameSection("=======NEW=======");
@@ -93,6 +96,10 @@ void addGames() {
   addGameCirclew();
   addGameCounterB();
   addGameCTower();
+  addGameFracave();
+  addGameDescents();
+  addGameDivarr();
+  addGameDLaser();
 
   addGameSection("======MOUSE======");
   addGameBBlast();
@@ -101,6 +108,8 @@ void addGames() {
   addGameCardq();
   addGameCNodes();
   addGameCrossLine();
+  addGameDarkCave();
+  addGameDFight();
 
   //inccorect
   addGameSection("======BUGGED=====");
