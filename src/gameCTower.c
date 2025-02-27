@@ -234,5 +234,5 @@ static void update() {
 }
 
 void addGameCTower() {
-    addGame(title, description, characters, charactersCount, options, update);
+    addGame(title, description, characters, charactersCount, options, false, update);
 }
