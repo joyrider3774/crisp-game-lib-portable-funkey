@@ -1,4 +1,5 @@
 #include "cglp.h"
+#include "trig_normalization.h"
 
 static char *title = "AERIAL BAR";
 static char *description = "[Tap]  Jump\n[Hold] Fly";
@@ -162,7 +163,7 @@ static void update() {
         ASSIGN_ARRAY_ITEM(bars, i, Bar, b);
         SKIP_IS_NOT_ALIVE(b);
         b->pos.x -= scr;  // Using Vector position
-        b->angleVel += cos(b->angle) * b->length * 0.00005 * sqrt(difficulty);
+        b->angleVel += normalized_cosf(b->angle) * b->length * 0.00005 * sqrt(difficulty);
         b->angle += b->angleVel;
         
         color = BLACK;

@@ -1,4 +1,5 @@
 #include "cglp.h"
+#include "trig_normalization.h"
 
 static char *title = "REFLECTOR";
 static char *description = "[Tap]\n Turn\n[Hold]\n Enforce\n reflector";
@@ -153,7 +154,7 @@ static void update() {
     ASSIGN_ARRAY_ITEM(explosions, i, Explosion, e);
     SKIP_IS_NOT_ALIVE(e);
     e->ticks--;
-    float r = e->radius * sin(e->ticks / e->duration * M_PI);
+    float r = e->radius * normalized_sinf(e->ticks / e->duration * M_PI);
     arc(VEC_XY(e->pos), r, 0, M_PI * 2);
     e->isAlive = e->ticks >= 0;
   }

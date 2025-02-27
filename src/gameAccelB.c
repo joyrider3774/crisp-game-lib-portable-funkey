@@ -4,6 +4,7 @@
 //players plane exhaust is drawn in front of player instead of behind (could be related to SDL)
 
 #include "cglp.h"
+#include "trig_normalization.h"
 
 static char *title = "ACCEL B";
 static char *description = "[Tap]  Fire\n[Hold] Accel";
@@ -158,7 +159,7 @@ static void update() {
         vectorMul(&s->vel, 0.95f);
         
         color = s->isEnemy && s->ticks < 20 ? LIGHT_RED : LIGHT_BLACK;
-        float boxSize = 3 + cos(s->ticks * 0.03f) * 5;  // Calculate size once
+        float boxSize = 3 + normalized_cosf(s->ticks * 0.03f) * 5;  // Calculate size once
         box(s->pos.x, s->pos.y, boxSize, boxSize);  // Same size for width/height
         
         s->ticks += sqrt(difficulty);
@@ -258,7 +259,7 @@ static void update() {
             m->exTicks += sqrt(difficulty);
             vectorMul(&m->vel, 0.9f);
             color = RED;
-            float boxSize = 3 + cos(m->exTicks * 0.05f) * 9;
+            float boxSize = 3 + normalized_cosf(m->exTicks * 0.05f) * 9;
             box(m->pos.x, m->pos.y, boxSize, boxSize);
             if (m->exTicks > 30) {
                 m->isAlive = false;
